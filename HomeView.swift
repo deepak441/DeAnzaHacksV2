@@ -1,199 +1,114 @@
 import SwiftUI
 
 struct HomeView: View {
+    @EnvironmentObject private var userVM: UserViewModel
     @EnvironmentObject private var itemsVM: ItemsViewModel
     @EnvironmentObject private var cartVM: CartViewModel
-    @EnvironmentObject private var tabRouter: TabRouter
-
-    @State private var searchText = ""
-    @State private var showingCart = false
-    @State private var showingMenu = false
-
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 2)
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Button {
-                    showingMenu = true
-                } label: {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.title2)
-                }
-                Spacer()
-                Text("Second Serve")
-                    .font(.headline)
-                Spacer()
-                Spacer().frame(width: 24)
-            }
-            .padding(.horizontal)
-
-            BannerView()
-                .padding(.horizontal)
-
+        NavigationStack {
             ScrollView {
-                LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(filteredItems) { item in
-                        NavigationLink {
-                            ItemDetailView(item: item)
-                        } label: {
-                            ItemCardView(item: item)
+                VStack(alignment: .leading, spacing: 16) {
+
+                    // MARK: - Points Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Your Points")
+                                .font(.headline)
+                            Spacer()
+                            Text("\(userVM.currentUser.points) pts")
+                                .font(.subheadline)
+                                .bold()
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal)
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                // Example deals
+                                RedeemDealView(title: "Free Coffee", cost: 10)
+                                RedeemDealView(title: "Discounted Bagel", cost: 15)
+                                RedeemDealView(title: "Gift Card $5", cost: 50)
+                            }
+                            .padding(.horizontal)
+                        }
+
+                        Divider()
+                    }
+                    .padding(.vertical, 8)
+
+                    // MARK: - Items Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Available Items")
+                            .font(.title2)
+                            .bold()
+                            .padding(.horizontal)
+
+                        ForEach(itemsVM.items) { item in
+                            NavigationLink(destination: ItemDetailView(item: item)
+                                            .environmentObject(cartVM)) {
+                                ItemRowView(item: item)
+                                    .padding(.horizontal)
+                            }
+                        }
                     }
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-
-                Spacer(minLength: 12)
             }
-
-            searchAndCartRow
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-        }
-        .sheet(isPresented: $showingCart) {
-            NavigationStack {
-                CartView()
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Close") { showingCart = false }
-                        }
-                    }
-            }
-        }
-        .sheet(isPresented: $showingMenu) {
-            MenuView {
-                showingMenu = false
-            }
-            .environmentObject(tabRouter)
-        }
-    }
-
-    private var filteredItems: [Item] {
-        guard !searchText.isEmpty else { return itemsVM.activeItems }
-        return itemsVM.activeItems.filter { item in
-            let term = searchText.lowercased()
-            return item.name.lowercased().contains(term) ||
-                item.category.lowercased().contains(term) ||
-                (item.donation ? "donate" : "sell").contains(term)
-        }
-    }
-
-    private var searchAndCartRow: some View {
-        HStack(spacing: 12) {
-            HStack {
-                Image(systemName: "magnifyingglass")
-                TextField("Search food or type", text: $searchText)
-                    .textInputAutocapitalization(.never)
-            }
-            .padding()
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-
-            Button {
-                showingCart = true
-            } label: {
-                Image(systemName: "cart.fill")
-                    .font(.title3)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.accentColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            }
-            .frame(width: 70)
+            .navigationTitle("Home")
         }
     }
 }
 
-private struct BannerView: View {
+// MARK: - Redeem Deal Card
+struct RedeemDealView: View {
+    let title: String
+    let cost: Int
+
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Save food, save money.")
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.subheadline)
+                .bold()
+                .multilineTextAlignment(.center)
+                .frame(width: 120)
+            Text("\(cost) pts")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding()
+        .background(Color.accentColor.opacity(0.1))
+        .cornerRadius(12)
+    }
+}
+
+// MARK: - Item Row View
+struct ItemRowView: View {
+    let item: Item
+
+    var body: some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(.secondarySystemBackground))
+                .frame(width: 60, height: 60)
+                .overlay(
+                    Image(systemName: "photo.on.rectangle")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                )
+
+            VStack(alignment: .leading) {
+                Text(item.name)
                     .font(.headline)
-                Text("Discover surplus meals nearby.")
+                Text(item.category)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
             Spacer()
-            Image(systemName: "leaf.fill")
-                .foregroundColor(.green)
-                .font(.title2)
+            Text(item.donation ? "Donate" : "$\(String(format: "%.2f", item.priceUSD ?? 0))")
+                .font(.subheadline)
+                .padding(6)
+                .background(item.donation ? Color.green.opacity(0.2) : Color.blue.opacity(0.2))
+                .clipShape(Capsule())
         }
-        .padding()
-        .background(Color(.tertiarySystemFill))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-}
-
-private struct ItemCardView: View {
-    let item: Item
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color(.secondarySystemBackground))
-                    .frame(height: 120)
-                Image(systemName: "photo")
-                    .font(.largeTitle)
-                    .foregroundColor(.secondary)
-            }
-
-            Text(item.name)
-                .font(.headline)
-
-            HStack {
-                Text(item.donation ? "Donate" : "Sell")
-                    .font(.caption)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(item.donation ? Color.green.opacity(0.15) : Color.blue.opacity(0.15))
-                    .clipShape(Capsule())
-                Spacer()
-                Text(expiryText)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            HStack {
-                Text(priceText)
-                    .font(.subheadline)
-                    .bold()
-                Spacer()
-                if !item.sealed {
-                    Text("Unsealed")
-                        .font(.caption2)
-                        .padding(6)
-                        .background(Color.red.opacity(0.15))
-                        .clipShape(Capsule())
-                }
-                if item.status == .pendingApproval {
-                    Text("Pending")
-                        .font(.caption2)
-                        .padding(6)
-                        .background(Color.orange.opacity(0.2))
-                        .clipShape(Capsule())
-                }
-            }
-        }
-        .padding()
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-    }
-
-    private var priceText: String {
-        if item.donation { return "Free" }
-        let price = item.priceUSD ?? 0
-        return "$\(String(format: "%.2f", price))"
-    }
-
-    private var expiryText: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        return "Exp: \(formatter.string(from: item.expiryDate))"
+        .padding(.vertical, 4)
     }
 }

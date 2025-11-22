@@ -47,7 +47,7 @@ struct Item: Identifiable, Hashable {
     var sealed: Bool
     var expiryDate: Date
     var description: String
-    var photoURLs: [URL]?
+    var photoURLs: [String]?
     var priceUSD: Double?
     var locationText: String
     var status: ItemStatus

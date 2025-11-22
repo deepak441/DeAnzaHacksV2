@@ -31,7 +31,7 @@ struct SampleData {
                 sealed: true,
                 expiryDate: Calendar.current.date(byAdding: .day, value: 2, to: Date()) ?? Date(),
                 description: "Freshly baked sourdough, perfect for sandwiches.",
-                photoURLs: nil,
+                photoURLs: ["banana"],
                 priceUSD: 4.50,
                 locationText: "San Jose, CA",
                 status: .active,

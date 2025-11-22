@@ -1,6 +1,5 @@
 import SwiftUI
 
-
 struct AddItemView: View {
     @EnvironmentObject private var userVM: UserViewModel
     @EnvironmentObject private var itemsVM: ItemsViewModel
@@ -30,20 +29,35 @@ struct AddItemView: View {
             }
 
             Section("Photos") {
-                Button {
-                    showPhotoPicker = true
-                } label: {
-                    Label("Choose from library", systemImage: "photo.on.rectangle")
+                HStack {
+                    Button {
+                        showPhotoPicker = true
+                    } label: {
+                        Label("Choose from library", systemImage: "photo.on.rectangle")
+                    }
+                    Spacer()
+                    Button {
+                        showCameraPicker = true
+                    } label: {
+                        Label("Take photo", systemImage: "camera")
+                    }
                 }
-                Button {
-                    showCameraPicker = true
-                } label: {
-                    Label("Take photo", systemImage: "camera")
-                }
+
+                // Display selected images
                 if !selectedImages.isEmpty {
-                    Text("\(selectedImages.count) photo(s) attached")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack {
+                            ForEach(selectedImages, id: \.self) { img in
+                                Image(uiImage: img)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 100, height: 100)
+                                    .clipped()
+                                    .cornerRadius(12)
+                            }
+                        }
+                        .padding(.vertical, 5)
+                    }
                 }
             }
 
@@ -64,16 +78,12 @@ struct AddItemView: View {
                 }
                 .pickerStyle(.segmented)
                 .onChange(of: sealed) { newValue in
-                    if !newValue {
-                        donation = false
-                    }
+                    if !newValue { donation = false }
                 }
-				.onChange(of: donation) { newValue in
-					if newValue && !sealed {
-						donation = false
-					}
-				}
-				
+                .onChange(of: donation) { newValue in
+                    if newValue && !sealed { donation = false }
+                }
+
                 if !donation {
                     TextField("Price (USD)", text: $price)
                         .keyboardType(.decimalPad)
@@ -112,6 +122,9 @@ struct AddItemView: View {
     }
 
     private func submit() {
+        // Convert UIImage to Data or URL if you plan to upload to Firebase Storage
+        // Removed unused 'photoURLs' constant to fix the warning
+
         let newItem = Item(
             id: UUID(),
             ownerId: userVM.currentUser.id,
@@ -121,7 +134,7 @@ struct AddItemView: View {
             sealed: sealed,
             expiryDate: expiryDate,
             description: description,
-            photoURLs: nil,
+            photoURLs: selectedImages.isEmpty ? nil : ["banana"],
             priceUSD: donation ? nil : Double(price),
             locationText: location,
             status: donation ? .active : .pendingApproval,
@@ -129,6 +142,7 @@ struct AddItemView: View {
         )
 
         itemsVM.addItem(newItem)
+
         if donation {
             userVM.addPoints(10)
             statusMessage = "Thank you for donating, we will get back to you soon!"
@@ -136,6 +150,7 @@ struct AddItemView: View {
             userVM.addPoints(2)
             statusMessage = "Your product was submitted and is pending approval."
         }
+
         showConfirmation = true
     }
 
@@ -148,5 +163,6 @@ struct AddItemView: View {
         donation = true
         price = ""
         expiryDate = Date()
+        selectedImages = []
     }
 }
